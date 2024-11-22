@@ -30,7 +30,7 @@ from .tensor_functions import (
     Sigmoid,
     Sum,
     View,
-    tensor
+    tensor,
 )
 
 if TYPE_CHECKING:
@@ -199,6 +199,7 @@ class Tensor:
 
     def zeros(self, shape: Optional[UserShape] = None) -> Tensor:
         """Create a tensor filled with zeros."""
+
         def zero(shape: UserShape) -> Tensor:
             return Tensor.make(
                 [0.0] * int(operators.prod(list(shape))), shape, backend=self.backend
@@ -295,6 +296,7 @@ class Tensor:
 
         """
         return self._tensor.shape
+
     @property
     def size(self) -> int:
         """Returns the total number of elements in the tensor."""
@@ -327,7 +329,7 @@ class Tensor:
 
     def __gt__(self, other: TensorLike) -> Tensor:
         """Element-wise greater-than comparison (implemented as inverse of less-than)."""
-        return LT.apply(self._ensure_tensor(other),self)
+        return LT.apply(self._ensure_tensor(other), self)
 
     def __neg__(self) -> Tensor:
         """Negation of the tensor."""
@@ -343,7 +345,7 @@ class Tensor:
 
     def all(self, dim: Optional[int] = None) -> Tensor:
         """Returns True if all elements in the tensor are non-zero."""
-        return All.apply(self,dim)
+        return All.apply(self, dim)
 
     def is_close(self, other: Tensor) -> Tensor:
         """Element-wise check if tensors are close within a tolerance."""
@@ -368,13 +370,17 @@ class Tensor:
     def sum(self, dim: Optional[int] = None) -> Tensor:
         """Sum of tensor elements along the specified dimension."""
         if dim is None:
-            return Sum.apply(self.contiguous().view(self.size),self._ensure_tensor(0))
+            return Sum.apply(self.contiguous().view(self.size), self._ensure_tensor(0))
         else:
             return Sum.apply(self, self._ensure_tensor(dim))
 
     def mean(self, dim: Optional[int] = None) -> Tensor:
         """Mean of tensor elements along the specified dimension."""
-        return self.sum(dim) / self.size if dim is None else self.sum(dim) / self.shape[dim]
+        return (
+            self.sum(dim) / self.size
+            if dim is None
+            else self.sum(dim) / self.shape[dim]
+        )
 
     def permute(self, *order: int) -> Tensor:
         """Permutes the dimensions of the tensor according to the specified order."""
@@ -387,5 +393,3 @@ class Tensor:
     def zero_grad_(self) -> None:
         """Sets the gradient to None, effectively resetting the gradients."""
         self.grad = None
-
-

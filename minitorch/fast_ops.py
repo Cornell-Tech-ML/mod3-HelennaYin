@@ -7,7 +7,6 @@ from numba import prange
 from numba import njit as _njit
 
 from .tensor_data import (
-    MAX_DIMS,
     broadcast_index,
     index_to_position,
     shape_broadcast,
@@ -19,7 +18,7 @@ if TYPE_CHECKING:
     from typing import Callable, Optional
 
     from .tensor import Tensor
-    from .tensor_data import Index, Shape, Storage, Strides
+    from .tensor_data import Shape, Storage, Strides
 
 # TIP: Use `NUMBA_DISABLE_JIT=1 pytest tests/ -m task3_1` to run these tests without JIT.
 
@@ -30,6 +29,7 @@ Fn = TypeVar("Fn")
 
 
 def njit(fn: Fn, **kwargs: Any) -> Fn:
+    """JIT compiles the function `fn` using numba."""
     return _njit(inline="always", **kwargs)(fn)  # type: ignore
 
 
@@ -318,7 +318,9 @@ def _tensor_matrix_multiply(
     assert a_shape[-1] == b_shape[-2]
 
     # Extract dimensions
-    batch_size = max(a_shape[0], b_shape[0]) if len(a_shape) > 2 or len(b_shape) > 2 else 1
+    batch_size = (
+        max(a_shape[0], b_shape[0]) if len(a_shape) > 2 or len(b_shape) > 2 else 1
+    )
     m, k = a_shape[-2], a_shape[-1]
     _, n = b_shape[-2], b_shape[-1]
 

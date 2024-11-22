@@ -29,12 +29,12 @@ FakeCUDAKernel = Any
 Fn = TypeVar("Fn")
 
 
-def device_jit(fn: Fn, **kwargs) -> Fn:
+def device_jit(fn: Fn, **kwargs: Any) -> Fn:
     """Decorator will compile the given function using the CUDA device."""
     return _jit(device=True, **kwargs)(fn)  # type: ignore
 
 
-def jit(fn: Fn, **kwargs) -> FakeCUDAKernel:
+def jit(fn: Fn, **kwargs: Any) -> FakeCUDAKernel:
     """Decorator will compile the given function using the CUDA device."""
     return _jit(**kwargs)(fn)  # type: ignore
 
@@ -239,7 +239,6 @@ def tensor_zip(
     return cuda.jit()(_zip)
 
 
-
 def _sum_practice(out: Storage, a: Storage, size: int) -> None:
     """Practice sum kernel to prepare for reduce."""
     BLOCK_DIM = 32
@@ -325,9 +324,9 @@ def tensor_reduce(
                 cache[pos] = a_storage[index_to_position(out_index, a_strides)]
                 cuda.syncthreads()
                 idx = 0
-                while 2 ** idx < BLOCK_DIM:
-                    if pos % ((2 ** idx) * 2) == 0:
-                        cache[pos] = fn(cache[pos], cache[pos + (2 ** idx)])
+                while 2**idx < BLOCK_DIM:
+                    if pos % ((2**idx) * 2) == 0:
+                        cache[pos] = fn(cache[pos], cache[pos + (2**idx)])
                         cuda.syncthreads()
                     idx += 1
             if pos == 0:
@@ -371,42 +370,32 @@ def _mm_practice(out: Storage, a: Storage, b: Storage, size: int) -> None:
     a_shared = cuda.shared.array((BLOCK_DIM, BLOCK_DIM), numba.float64)
     b_shared = cuda.shared.array((BLOCK_DIM, BLOCK_DIM), numba.float64)
 
-    # Thread and block indices
     tx = cuda.threadIdx.x
     ty = cuda.threadIdx.y
     row = cuda.blockIdx.x * BLOCK_DIM + tx
     col = cuda.blockIdx.y * BLOCK_DIM + ty
 
-    # Initialize the output value
     temp = 0.0
 
-    # Loop over tiles of the matrices
     for k in range((size + BLOCK_DIM - 1) // BLOCK_DIM):
-        # Load submatrix of `a` into shared memory
         if row < size and (k * BLOCK_DIM + ty) < size:
             a_shared[tx, ty] = a[row * size + (k * BLOCK_DIM + ty)]
         else:
             a_shared[tx, ty] = 0.0
 
-        # Load submatrix of `b` into shared memory
         if col < size and (k * BLOCK_DIM + tx) < size:
             b_shared[tx, ty] = b[(k * BLOCK_DIM + tx) * size + col]
         else:
             b_shared[tx, ty] = 0.0
 
-        # Synchronize threads to ensure both matrices are loaded
         cuda.syncthreads()
 
-        # Perform partial matrix multiplication for this tile
         for j in range(BLOCK_DIM):
             temp += a_shared[tx, j] * b_shared[j, ty]
-
-        # Synchronize threads before loading the next tile
         cuda.syncthreads()
-
-    # Write the computed value to the output matrix
     if row < size and col < size:
         out[row * size + col] = temp
+
 
 jit_mm_practice = jit(_mm_practice)
 
@@ -476,17 +465,25 @@ def _tensor_matrix_multiply(
     #    c) Compute the dot produce for position c[i, j]
     temp = 0.0
 
-    for k in range((a_shape[-1]+BLOCK_DIM - 1)//BLOCK_DIM):
+    for k in range((a_shape[-1] + BLOCK_DIM - 1) // BLOCK_DIM):
         if i < a_shape[-2] and k * BLOCK_DIM + pj < a_shape[-1]:
-            a_shared[pi, pj] = a_storage[batch*a_batch_stride+i*a_strides[-2]+(k * BLOCK_DIM+pj)*a_strides[-1]]
-        else:
+            a_shared[pi, pj] = a_storage[
+                batch * a_batch_stride
+                + i * a_strides[-2]
+                + (k * BLOCK_DIM + pj) * a_strides[-1]
+            ]
+        else:  # threads not used is set as 0
             a_shared[pi, pj] = 0.0
-        
+
         if j < b_shape[-1] and (k * BLOCK_DIM + pi) < b_shape[-2]:
-            b_shared[pi, pj] = b_storage[batch*b_batch_stride+ (k*BLOCK_DIM+pi)*b_strides[-2]+j*b_strides[-1]]
-        else:
+            b_shared[pi, pj] = b_storage[
+                batch * b_batch_stride
+                + (k * BLOCK_DIM + pi) * b_strides[-2]
+                + j * b_strides[-1]
+            ]
+        else:  # threads not used is set as 0
             b_shared[pi, pj] = 0.0
-        
+
         cuda.syncthreads()
 
         for a in range(BLOCK_DIM):
@@ -495,10 +492,7 @@ def _tensor_matrix_multiply(
         cuda.syncthreads()
 
     if i < out_shape[-2] and j < out_shape[-1]:
-        out[batch*out_strides[0]+i*out_strides[-2]+j*out_strides[-1]] = temp
-
-
-
+        out[batch * out_strides[0] + i * out_strides[-2] + j * out_strides[-1]] = temp
 
 
 tensor_matrix_multiply = jit(_tensor_matrix_multiply)

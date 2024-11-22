@@ -45,9 +45,8 @@ class TensorOps:
         """Reduce"""
         ...
 
-
     @staticmethod
-    def matrix_multiply(a: Tensor, b: Tensor) -> Tensor: 
+    def matrix_multiply(a: Tensor, b: Tensor) -> Tensor:
         """Matrix multiply"""
         ...
 
@@ -60,10 +59,12 @@ class TensorBackend:
         that implements map, zip, and reduce higher-order functions.
 
         Args:
+        ----
             ops : tensor operations object see `tensor_ops.py`
 
 
         Returns:
+        -------
             A collection of tensor functions
 
         """
@@ -115,12 +116,14 @@ class SimpleOps(TensorOps):
                     out[i, j] = fn(a[i, 0])
 
         Args:
+        ----
             fn: function from float-to-float to apply.
             a (:class:`TensorData`): tensor to map over
             out (:class:`TensorData`): optional, tensor data to fill in,
                    should broadcast with `a`
 
         Returns:
+        -------
             new tensor data
 
         """
@@ -157,11 +160,13 @@ class SimpleOps(TensorOps):
 
 
         Args:
+        ----
             fn: function from two floats-to-float to apply
             a (:class:`TensorData`): tensor to zip over
             b (:class:`TensorData`): tensor to zip over
 
         Returns:
+        -------
             :class:`TensorData` : new tensor data
 
         """
@@ -186,7 +191,7 @@ class SimpleOps(TensorOps):
 
           fn_reduce = reduce(fn)
           out = fn_reduce(a, dim)
-          
+
 
         Simple version ::
 
@@ -197,6 +202,7 @@ class SimpleOps(TensorOps):
 
 
         Args:
+        ----
             fn: function from two floats-to-float to apply
             a (:class:`TensorData`): tensor to reduce over
             dim (int): int of dim to reduce
@@ -204,6 +210,7 @@ class SimpleOps(TensorOps):
 
 
         Returns:
+        -------
             :class:`TensorData` : new tensor
 
         """
@@ -222,7 +229,6 @@ class SimpleOps(TensorOps):
 
         return ret
 
-
     @staticmethod
     def matrix_multiply(a: "Tensor", b: "Tensor") -> "Tensor":
         """Matrix multiplication"""
@@ -232,7 +238,6 @@ class SimpleOps(TensorOps):
         c = c.sum(1)
         c = c.view(a.shape[0], b.shape[1])
         return c
-
 
     is_cuda = False
 
@@ -259,9 +264,11 @@ def tensor_map(
       broadcast. (`in_shape` must be smaller than `out_shape`).
 
     Args:
+    ----
         fn: function from float-to-float to apply
 
     Returns:
+    -------
         Tensor map function.
 
     """
@@ -274,13 +281,13 @@ def tensor_map(
         in_shape: Shape,
         in_strides: Strides,
     ) -> None:
-        out_index = np.zeros(MAX_DIMS,np.int32)
+        out_index = np.zeros(MAX_DIMS, np.int32)
         in_index = np.zeros(MAX_DIMS, np.int32)
         for i in range(len(out)):
             to_index(i, out_shape, out_index)
-            broadcast_index(out_index,out_shape,in_shape,in_index)
-            o = index_to_position(out_index,out_strides)
-            j = index_to_position(in_index,in_strides)
+            broadcast_index(out_index, out_shape, in_shape, in_index)
+            o = index_to_position(out_index, out_strides)
+            j = index_to_position(in_index, in_strides)
             out[o] = fn(in_storage[j])
 
     return _map
@@ -307,9 +314,11 @@ def tensor_zip(
       and `b_shape` broadcast to `out_shape`.
 
     Args:
+    ----
         fn: function mapping two floats to float to apply
 
     Returns:
+    -------
         Tensor zip function.
 
     """
@@ -325,7 +334,7 @@ def tensor_zip(
         b_shape: Shape,
         b_strides: Strides,
     ) -> None:
-        out_index = np.zeros(MAX_DIMS,np.int32)
+        out_index = np.zeros(MAX_DIMS, np.int32)
         a_index = np.zeros(MAX_DIMS, np.int32)
         b_index = np.zeros(MAX_DIMS, np.int32)
         for i in range(len(out)):
@@ -349,9 +358,11 @@ def tensor_reduce(
        except with `reduce_dim` turned to size `1`
 
     Args:
+    ----
         fn: reduction function mapping two floats to float
 
     Returns:
+    -------
         Tensor reduce function.
 
     """
@@ -365,16 +376,17 @@ def tensor_reduce(
         a_strides: Strides,
         reduce_dim: int,
     ) -> None:
-        out_index = np.zeros(MAX_DIMS,np.int32)
+        out_index = np.zeros(MAX_DIMS, np.int32)
         reduce_size = a_shape[reduce_dim]
         for i in range(len(out)):
             to_index(i, out_shape, out_index)
-            o = index_to_position(out_index,out_strides)
+            o = index_to_position(out_index, out_strides)
             for s in range(reduce_size):
                 out_index[reduce_dim] = s
                 j = index_to_position(out_index, a_strides)
-                out[o] =fn(out[o], a_storage[j])
+                out[o] = fn(out[o], a_storage[j])
 
     return _reduce
+
 
 SimpleBackend = TensorBackend(SimpleOps)
