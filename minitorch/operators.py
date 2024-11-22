@@ -85,7 +85,7 @@ def sigmoid(x: float) -> float:
 
 def relu(x: float) -> float:
     """Calculate the rectified linear unit (ReLU) function of x"""
-    return max(0, x)
+    return 0 if x < 0 else x
 
 
 def log(x: float) -> float:
