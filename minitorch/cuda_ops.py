@@ -170,8 +170,8 @@ def tensor_map(
         in_shape: Shape,
         in_strides: Strides,
     ) -> None:
-        out_index = cuda.local.array(MAX_DIMS, numba.int32)
-        in_index = cuda.local.array(MAX_DIMS, numba.int32)
+        out_index = cuda.local.array(32, numba.int32)
+        in_index = cuda.local.array(32, numba.int32)
         i = cuda.blockIdx.x * cuda.blockDim.x + cuda.threadIdx.x
         if i < out_size:
             to_index(i, out_shape, out_index)
@@ -324,7 +324,7 @@ def tensor_reduce(
     ) -> None:
         BLOCK_DIM = 1024
         cache = cuda.shared.array(BLOCK_DIM, numba.float64)
-        out_index = cuda.local.array(MAX_DIMS, numba.int32)
+        out_index = cuda.local.array(32, numba.int32)
         out_pos = cuda.blockIdx.x
         pos = cuda.threadIdx.x
 
