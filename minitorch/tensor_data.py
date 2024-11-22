@@ -256,6 +256,7 @@ class TensorData:
             New `TensorData` with the same storage and a new dimension order.
 
         """
+        assert list(sorted(order)) == list(range(len(self.shape))), f"Must give a position to each dimension:{self.shape}"
         new_shape = tuple(self.shape[i] for i in order)
         new_strides = tuple(self._strides[i] for i in order)
         
